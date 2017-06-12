@@ -1,0 +1,36 @@
+{
+  "name": "ygzx-jq-ersi-leaflet",
+  "version": "1.0.0",
+  "description": "jquery bootstrap flat-ui leaflet esri-leaflet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "jquery",
+    "bootstrap",
+    "flat-ui",
+    "leaflet",
+    "esri-leaflet"
+  ],
+  "author": "liucaidong <791136794@qq.com>",
+  "license": "ISC",
+  "dependencies": {
+    "Respond.js": "git+https://github.com/scottjehl/Respond.git",
+    "esri-leaflet": "^2.0.8",
+    "flat-ui": "^2.1.1",
+    "flip-calendar-picker": "git+https://github.com/Jerry-goodboy/Calendar-2.git",
+    "font-awesome": "^4.7.0",
+    "jquery-ui": "^1.12.1",
+    "leaflet-shape-markers": "^1.0.6",
+    "leaflet.awesome-markers": "^2.0.4",
+    "leaflet.marker.highlight": "git+https://github.com/Jerry-goodboy/leaflet.marker.highlight.git",
+    "perfect-DateTimePicker": "git+https://github.com/Jerry-goodboy/Perfect-DateTimePicker.git",
+    "proj4leaflet": "^1.0.1",
+    "select2": "^4.0.3",
+    "select2-Flat_Theme": "git+https://github.com/Jerry-goodboy/select2-Flat_Theme.git",
+    "videojs-contrib-hls": "^5.4.1",
+    "videojs-flash": "^1.0.0",
+    "zTree_v3": "git+https://github.com/Jerry-goodboy/zTree_v3.git"
+  }
+}

@@ -1,0 +1,26 @@
+{
+  "name": "ygzx-jq-ersi-leaflet",
+  "version": "1.0.0",
+  "description": "jquery bootstrap flat-ui leaflet esri-leaflet",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "jquery",
+    "bootstrap",
+    "flat-ui",
+    "leaflet",
+    "esri-leaflet"
+  ],
+  "author": "liucaidong <791136794@qq.com>",
+  "license": "ISC",
+  "dependencies": {
+    "Respond.js": "git+https://github.com/scottjehl/Respond.git",
+    "esri-leaflet": "^2.0.8",
+    "express": "^4.15.2",
+    "jquery": "^1.11.1",
+    "proj4leaflet": "^1.0.1",
+    "socket.io": "^2.0.1"
+  }
+}

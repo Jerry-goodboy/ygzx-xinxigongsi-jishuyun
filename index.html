@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="zh-CN">
+
+<head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <!-- 上述3个meta标签*必须*放在最前面，任何其他内容都*必须*跟随其后！ -->
+
+    <title>天津港集疏运地理信息系统</title>
+
+    <!-- lets load Leaflet's  .css -->
+    <link rel="stylesheet" href="./node_modules/leaflet/dist/leaflet.css"/>
+
+    <!-- Load custom css-->
+    <link rel="stylesheet" href="./css/style.css">
+
+    <!-- HTML5 shim, for IE6-8 support of HTML5 elements. All other JS at the end of file. -->
+    <!--[if lt IE 9]>
+    <script src="./node_modules/flat-ui/js/html5shiv.js"></script>
+    <script src="./node_modules/Respond.js/dest/respond.min.js"></script>
+    <![endif]-->
+</head>
+
+<body>
+
+<!-- 地图容器 -->
+<div id="map"></div>
+
+<!-- lets load Leaflet's .js -->
+<script src="./node_modules/leaflet/dist/leaflet-src.js"></script>
+
+<!-- Load Esri Leaflet .  it has no .css stylesheet of its own, only .js -->
+<script src="./node_modules/esri-leaflet/dist/esri-leaflet-debug.js"></script>
+
+<!-- Include Proj4JS via rawgit.com in production you'd be better off hosting these libraries yourself -->
+<script src="./node_modules/proj4/dist/proj4-src.js"></script>
+<script src="./node_modules/proj4leaflet/src/proj4leaflet.js"></script>
+
+<!-- Load jQuery.js and bootstrap.js and flat-ui related js -->
+<script src="./node_modules/jquery/dist/jquery.js"></script>
+
+<!-- load socket.io client js -->
+<script src="./node_modules/socket.io-client/dist/socket.io.js"></script>
+
+<script src="./js/index.js"></script>
+
+</body>
+
+</html>
