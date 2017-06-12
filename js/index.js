@@ -1,7 +1,7 @@
 $(function () {
     // 所有的线路图层
-    var tucengAPI = "./all.json";
-    // var tucengAPI = "http://192.168.1.101:8080/psms/mapapi/loadLdColorInfo";
+    // var tucengAPI = "./all.json";
+    var tucengAPI = "http://192.168.1.101:8080/psms/mapapi/loadLdColorInfo";
 
     // 基础地图二维底图
     var mapTileJCSJ = "http://10.128.101.221:6080/arcgis/rest/services/JCSJ/DX20170406/MapServer";
@@ -58,6 +58,8 @@ $(function () {
     // 所有的线路图层
     var allRouteLayers;
 
+    var allRoadIds = [];
+
     // 加载底图
     var layer = L.esri.tiledMapLayer({
         url: mapTileJCSJ,
@@ -70,6 +72,7 @@ $(function () {
             url: tucengAPI,
             dataType: "json",
             success: function (data) {
+                allRoadIds = [];
 
                 clearMapLayers();
 
@@ -85,6 +88,8 @@ $(function () {
                 var colorObj = {};
 
                 for (var i = 0; i < data.roadIds.length; i++) {
+                    allRoadIds.push(data.roadIds[i]);
+
                     queryStr += "'";
                     queryStr += data.roadIds[i];
                     queryStr += "'";
@@ -138,7 +143,7 @@ $(function () {
                             }
 
                             var myStyle = {
-                                "color": colorObj[geoJSON["properties"]["代码"]],
+                                "color": colorObj[geoJSON["properties"]["code"]],
                                 "weight": 5,
                                 "opacity": 0.85
                             };
@@ -203,55 +208,58 @@ $(function () {
 
                                     // 如果当前数据结果的长度大于0执行
                                     if (data["results"].length > 0) {
+                                        var results = data["results"];
 
-                                        // 将arcgis 地图格式 转换为 geoJSON的格式
-                                        var geoJSON = L.esri.Util.arcgisToGeoJSON(data["results"][0]);
+                                        for(var i = 0; i < results.length; i++){
+                                            if($.inArray(results[i]["attributes"]["code"], allRoadIds) != -1) {
+                                                // 将arcgis 地图格式 转换为 geoJSON的格式
+                                                var geoJSON = L.esri.Util.arcgisToGeoJSON(results[i]);
 
-                                        var geometryType = geoJSON["geometry"]["type"];
-                                        var rings = geoJSON["geometry"]["coordinates"];
+                                                var geometryType = geoJSON["geometry"]["type"];
+                                                var rings = geoJSON["geometry"]["coordinates"];
+                                                var roadCode = geoJSON["properties"]["code"];
 
-                                        // 根据点线面类型来进行判断执行坐标参考的转换
-                                        switch (geometryType) {
-                                            case "LineString":
-                                                for (var i = 0; i < rings.length; i++) {
-                                                    var arcgisPoint = L.point(rings[i][0], rings[i][1]);
-                                                    var LatLngPoint = crs.unproject(arcgisPoint);
-                                                    geoJSON["geometry"]["coordinates"][i][0] = LatLngPoint.lng;
-                                                    geoJSON["geometry"]["coordinates"][i][1] = LatLngPoint.lat;
+                                                // 根据点线面类型来进行判断执行坐标参考的转换
+                                                switch (geometryType) {
+                                                    case "LineString":
+                                                        for (var i = 0; i < rings.length; i++) {
+                                                            var arcgisPoint = L.point(rings[i][0], rings[i][1]);
+                                                            var LatLngPoint = crs.unproject(arcgisPoint);
+                                                            geoJSON["geometry"]["coordinates"][i][0] = LatLngPoint.lng;
+                                                            geoJSON["geometry"]["coordinates"][i][1] = LatLngPoint.lat;
+                                                        }
+                                                        break;
                                                 }
+
+                                                // 根据点线面类型来生成对应的高亮图层
+                                                switch (geometryType) {
+                                                    case "LineString":
+
+                                                        var myStyle = {
+                                                            "color": "#3bfff2",
+                                                            "weight": 5,
+                                                            "opacity": 0.85
+                                                        };
+
+                                                        highlightGeometry = L.geoJSON(geoJSON, {
+                                                            style: myStyle
+                                                        }).addTo(map);
+                                                        break;
+                                                }
+
+                                                console.log(geoJSON);
+
+                                                socket.emit('gismap', {
+                                                    sid: queryRandom,
+                                                    command: "singleRoadId",
+                                                    data: {
+                                                        "roadId":roadCode
+                                                    }
+                                                });
+
                                                 break;
-                                        }
-
-                                        // 根据点线面类型来生成对应的高亮图层
-                                        switch (geometryType) {
-                                            case "LineString":
-
-                                                var myStyle = {
-                                                    "color": "#3bfff2",
-                                                    "weight": 5,
-                                                    "opacity": 0.85
-                                                };
-
-                                                highlightGeometry = L.geoJSON(geoJSON, {
-                                                    style: myStyle
-                                                }).addTo(map);
-                                                break;
-                                        }
-
-                                        console.log(geoJSON);
-
-                                        // socket.emit('singleRoad', {
-                                        //     "roadId":geoJSON["properties"]["代码"]
-                                        // });
-                                        
-                                        socket.emit('gismap', {
-                                            sid: queryRandom,
-                                            command: "singleRoadId",
-                                            data: {
-                                                "roadId":"001_022"
                                             }
-                                        });
-
+                                        }
                                     }
                                 },
                                 error: function (error) {
@@ -287,16 +295,18 @@ $(function () {
 
         var queryStr = '';
 
+        var roadIdsArr = data.roadIds.split(",");
+
         for (var i = 0; i < data.roadIds.length; i++) {
             queryStr += "'";
-            queryStr += data.roadIds[i];
+            queryStr += roadIdsArr[i];
             queryStr += "'";
             queryStr += ",";
         }
 
         queryStr = queryStr.substr(0,queryStr.length - 1);
 
-        layersDefs[layersIDs[0]] = "代码 IN (" + queryStr + ")";
+        layersDefs[layersIDs[0]] = "code IN (" + queryStr + ")";
 
         dynamicMapLayer = L.esri.dynamicMapLayer({
             url: mapQueryBaseUrl,
@@ -305,7 +315,7 @@ $(function () {
             layerDefs: layersDefs
         }).addTo(map);
 
-        var dotsDefs = "代码 IN ('" + data["routeStart"]["code"] + "','" + data["routeEnd"]["code"] + "')";
+        var dotsDefs = "code IN ('" + data["routeStart"]["code"] + "','" + data["routeEnd"]["code"] + "')";
 
         var url = mapQueryBaseUrl + "/0/query?where=";
         url += dotsDefs;
@@ -395,6 +405,7 @@ $(function () {
         if(queryRandom == msg.sid){
             switch (msg.command) {
                 case "singleRoute":
+                    console.log(msg);
                     showRoute(msg.data);
                     break;
                 case "allRoutes":
