@@ -1,7 +1,7 @@
 $(function () {
     // 所有的线路图层
     // var tucengAPI = "./all.json";
-    var tucengAPI = "http://192.168.1.101:8080/psms/mapapi/loadLdColorInfo";
+    var tucengAPI = "http://192.168.18.107:8080/psms/mapapi/loadLdColorInfo";
 
     // 基础地图二维底图
     var mapTileJCSJ = "http://10.128.101.221:6080/arcgis/rest/services/JCSJ/DX20170406/MapServer";
@@ -292,6 +292,7 @@ $(function () {
         var layersDefs = {};
 
         layersIDs.push(1);
+        layersIDs.push(2);
 
         var queryStr = '';
 
@@ -306,7 +307,10 @@ $(function () {
 
         queryStr = queryStr.substr(0,queryStr.length - 1);
 
+        var dotsDefs = "编码 IN ('" + data["routeStart"]["code"] + "','" + data["routeEnd"]["code"] + "')";
+
         layersDefs[layersIDs[0]] = "code IN (" + queryStr + ")";
+        layersDefs[layersIDs[1]] = dotsDefs;
 
         dynamicMapLayer = L.esri.dynamicMapLayer({
             url: mapQueryBaseUrl,
@@ -315,9 +319,7 @@ $(function () {
             layerDefs: layersDefs
         }).addTo(map);
 
-        var dotsDefs = "code IN ('" + data["routeStart"]["code"] + "','" + data["routeEnd"]["code"] + "')";
-
-        var url = mapQueryBaseUrl + "/0/query?where=";
+        var url = mapQueryBaseUrl + "/2/query?where=";
         url += dotsDefs;
         url += "&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&returnTrueCurves=false&resultOffset=&resultRecordCount=&f=pjson";
 
@@ -329,30 +331,70 @@ $(function () {
 
                 var features = data["features"];
 
-                for (var j = 0; j < features.length; j++) {
-                    var geoJSON = L.esri.Util.arcgisToGeoJSON(features[j]);
-                    // console.log(geoJSON);
+                if(features.length > 0) {
+                    var geoJSON = L.esri.Util.arcgisToGeoJSON(features[0]);
+                    console.log(geoJSON);
 
                     var geometryType = geoJSON["geometry"]["type"];
                     var rings = geoJSON["geometry"]["coordinates"];
 
-                    // 根据点线面类型来进行判断执行坐标参考的转换
-                    switch (geometryType) {
-                        case "Point":
-                            var arcgisPoint = L.point(rings[0], rings[1]);
-                            var LatLngPoint = crs.unproject(arcgisPoint);
-                            geoJSON["geometry"]["coordinates"][0] = LatLngPoint.lng;
-                            geoJSON["geometry"]["coordinates"][1] = LatLngPoint.lat;
-                            L.marker([
-                                geoJSON["geometry"]["coordinates"][1],
-                                geoJSON["geometry"]["coordinates"][0]
-                            ]).addTo(map);
-                            break;
-                    }
-                }
 
-                // 为了保险起见，取消地图上所有的click事件
-                map.off("click");
+                    var arcgisPoint = L.point(rings[0][0][0], rings[0][0][1]);
+                    var LatLngPoint = crs.unproject(arcgisPoint);
+
+                    map.panTo(LatLngPoint);
+
+                    var latLngBounds = [];
+
+                    for (var j = 0; j < features.length; j++) {
+                        var geoJSON = L.esri.Util.arcgisToGeoJSON(features[j]);
+                        // console.log(geoJSON);
+
+                        var geometryType = geoJSON["geometry"]["type"];
+                        var rings = geoJSON["geometry"]["coordinates"];
+
+                        // 根据点线面类型来进行判断执行坐标参考的转换
+                        switch (geometryType) {
+                            case "Point":
+                                var arcgisPoint = L.point(rings[0], rings[1]);
+                                var LatLngPoint = crs.unproject(arcgisPoint);
+
+                                latLngBounds.push(LatLngPoint);
+
+                                geoJSON["geometry"]["coordinates"][0] = LatLngPoint.lng;
+                                geoJSON["geometry"]["coordinates"][1] = LatLngPoint.lat;
+
+                                var iconUrl = "./assets/start.gif";
+
+                                if(geoJSON["properties"]["编码"] == data["routeEnd"]["code"]){
+                                    iconUrl = "./assets/end.png";
+                                }
+                                
+                                var cameraIcon = L.icon({
+                                    iconUrl: iconUrl,
+                                    shadowUrl: './node_modules/leaflet/dist/images/marker-shadow.png',
+                                    iconSize: [30, 30], // size of the icon
+                                    shadowSize: [30, 30], // size of the shadow
+                                    iconAnchor: [15, 15], // point of the icon which will correspond to marker's location
+                                    shadowAnchor: [15, 15]//,  // the same for the shadow
+                                });
+
+                                L.marker([
+                                    geoJSON["geometry"]["coordinates"][1],
+                                    geoJSON["geometry"]["coordinates"][0]
+                                ],{icon: cameraIcon}).addTo(map);
+
+                                break;
+                        }
+                    }
+
+                    if (latLngBounds.length != 0) {
+                        map.fitBounds(latLngBounds);
+                    }
+
+                    // 为了保险起见，取消地图上所有的click事件
+                    map.off("click");
+                }
 
             },
             error: function (error) {
@@ -375,9 +417,110 @@ $(function () {
         };
     }
 
+    function searchComYard(data) {
+        // var data = { ComCode: '03405000', YardCode: '00000005' };
+        clearMapLayers();
+
+        // 需要显示的图层ID
+        var layersIDs = [];
+        // 需要显示的图层ID和过滤条件
+        var layersDefs = {};
+
+        layersIDs.push(2);
+
+        var queryStr = '';
+
+        var dotsDefs;
+
+        if(data["ComCode"].trim() == "" && data["YardCode"].trim() == ""){
+            return false;
+        }else if (data["ComCode"].trim() != "" && data["YardCode"].trim() == ""){
+            dotsDefs = "编码 IN ('" + data["ComCode"] + "')";
+        }else if (data["ComCode"].trim() == "" && data["YardCode"].trim() != ""){
+            dotsDefs = "编码 IN ('" + data["YardCode"] + "')";
+        }else if (data["ComCode"].trim() != "" && data["YardCode"].trim() != ""){
+            dotsDefs = "编码 IN ('" + data["ComCode"] + "','" + data["YardCode"] + "')";
+        }
+
+        layersDefs[layersIDs[0]] = dotsDefs;
+
+        dynamicMapLayer = L.esri.dynamicMapLayer({
+            url: mapQueryBaseUrl,
+            opacity: 1,
+            layers: layersIDs,
+            layerDefs: layersDefs
+        }).addTo(map);
+
+        var url = mapQueryBaseUrl + "/2/query?where=";
+        url += dotsDefs;
+        url += "&text=&objectIds=&time=&geometry=&geometryType=esriGeometryEnvelope&inSR=&spatialRel=esriSpatialRelIntersects&relationParam=&outFields=*&returnGeometry=true&maxAllowableOffset=&geometryPrecision=&outSR=&returnIdsOnly=false&returnCountOnly=false&orderByFields=&groupByFieldsForStatistics=&outStatistics=&returnZ=false&returnM=false&gdbVersion=&returnDistinctValues=false&returnTrueCurves=false&resultOffset=&resultRecordCount=&f=pjson";
+
+        $.ajax({
+            url: url,
+            dataType: "json",
+            success: function (data) {
+                console.log(data);
+
+                var features = data["features"];
+
+                if (features.length > 0){
+                    var geoJSON = L.esri.Util.arcgisToGeoJSON(features[0]);
+                    console.log(geoJSON);
+
+                    var geometryType = geoJSON["geometry"]["type"];
+                    var rings = geoJSON["geometry"]["coordinates"];
+
+
+                    var arcgisPoint = L.point(rings[0][0][0], rings[0][0][1]);
+                    var LatLngPoint = crs.unproject(arcgisPoint);
+
+                    map.panTo(LatLngPoint);
+
+                    var latLngBounds = [];
+
+                    for (var j = 0; j < features.length; j++) {
+                        var geoJSON = L.esri.Util.arcgisToGeoJSON(features[j]);
+                        // console.log(geoJSON);
+
+                        var geometryType = geoJSON["geometry"]["type"];
+                        var rings = geoJSON["geometry"]["coordinates"];
+
+                        // 根据点线面类型来进行判断执行坐标参考的转换
+                        switch (geometryType) {
+                            case "Point":
+                                var arcgisPoint = L.point(rings[0], rings[1]);
+                                var LatLngPoint = crs.unproject(arcgisPoint);
+
+                                latLngBounds.push(LatLngPoint);
+
+                                geoJSON["geometry"]["coordinates"][0] = LatLngPoint.lng;
+                                geoJSON["geometry"]["coordinates"][1] = LatLngPoint.lat;
+                                L.marker([
+                                    geoJSON["geometry"]["coordinates"][1],
+                                    geoJSON["geometry"]["coordinates"][0]
+                                ]).addTo(map);
+                                break;
+                        }
+                    }
+
+                    if (latLngBounds.length != 0) {
+                        map.fitBounds(latLngBounds);
+                    }
+
+                    // 为了保险起见，取消地图上所有的click事件
+                    map.off("click");
+                }
+
+            },
+            error: function (error) {
+                console.log(error);
+            }
+        });
+    }
+
     showRoutes();
 
-    var socket = io("http://192.168.1.103:3333");
+    var socket = io("http://192.168.18.72:3333");
 
     socket.on('connect', function(msg){
         console.log(msg);
@@ -412,7 +555,7 @@ $(function () {
                     showRoutes();
                     break;
                 case "searchComYard":
-                    searchComYard();
+                    searchComYard(msg.data);
                     // {
                     //     "ComCode":121,
                     //     "YardCode":233
